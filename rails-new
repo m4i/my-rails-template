@@ -1,0 +1,12 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]; then
+  echo "./rails-new APP_PATH [options]" 2>&1
+  exit 1
+fi
+
+_app_path="$1"
+shift
+
+echo $ bundle exec rails new "$_app_path" -m template.rb --skip-bundle -T "$@"
+bundle exec rails new "$_app_path" -m template.rb --skip-bundle -T "$@"
