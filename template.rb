@@ -159,3 +159,9 @@ begin
   end
   git add: '.', commit: '-m "add rspec options"'
 end
+
+
+begin
+  remove_file 'public/index.html'
+  git add: '-u .', commit: '-m "delete index.html"'
+end
