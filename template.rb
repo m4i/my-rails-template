@@ -101,8 +101,7 @@ end
 
 
 begin
-  bundle_path = File.expand_path('bundle', "#{Dir.pwd}/..")
-  create_link 'vendor/bundle', bundle_path
+  create_link 'vendor/bundle', Bundler.bundle_path.parent.parent
 
   run 'bundle install --path vendor/bundle'
   git add: '.', commit: '-m "exec bundle install"'
