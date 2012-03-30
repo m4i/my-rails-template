@@ -78,6 +78,7 @@ begin
     gem 'plymouth', require: false
     gem 'pry-exception_explorer'
     gem 'pry-nav'
+    gem 'pry-rails'
     gem 'pry-remote'
     gem 'pry-stack_explorer'
   end
