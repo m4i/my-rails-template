@@ -1,12 +1,39 @@
 #!/bin/bash
 
+execute() {
+  echo -n $'\e[35m'
+  echo -n $ "$@"
+  echo    $'\e[0m'
+  "$@"
+  if [ $? -ne 0 ]; then
+    echo 'Error occurred' >&2
+    exit 2
+  fi
+}
+
+
 if [ $# -eq 0 ]; then
-  echo "./rails-new APP_PATH [options]" 2>&1
+  echo './rails-new APP_PATH [options]' >&2
   exit 1
 fi
 
-_app_path="$1"
+app_path="$1"
 shift
 
-echo $ bundle exec rails new "$_app_path" -m template.rb --skip-bundle -T "$@"
-bundle exec rails new "$_app_path" -m template.rb --skip-bundle -T "$@"
+app_name="${app_path##*/}"
+rails_new_root="$(dirname $0)"
+tmp_app_path="$rails_new_root/$app_name"
+if [ -e "$tmp_app_path" ]; then
+  execute rm -rf "$tmp_app_path"
+fi
+
+cd "$rails_new_root"
+execute bundle exec rails new "$app_name" -m template.rb --skip-bundle -T "$@"
+cd -
+
+if [ "$tmp_app_path" != "$app_path" ]; then
+  if [ -e "$app_path" ]; then
+    execute rm -rf "$app_path"
+  fi
+  execute mv "$tmp_app_path" "$app_path"
+fi
