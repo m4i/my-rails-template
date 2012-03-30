@@ -39,7 +39,7 @@ ENV.delete('RUBYOPT')
 
 begin
   git :init
-  git add: '.', commit: '-m "exec rails new"'
+  git add: '.', commit: '-m "Exec rails new"'
 end
 
 
@@ -52,14 +52,14 @@ begin
     /public/assets/
     /vendor/bundle
   __EOT__
-  git add: '.', commit: '-m "add ignore files"'
+  git add: '.', commit: '-m "Add ignore files"'
 end
 
 
 begin
   if use_haml
     gem 'haml-rails'
-    git add: '.', commit: '-m "add haml-rails to Gemfile"'
+    git add: '.', commit: '-m "Add haml-rails to Gemfile"'
   end
 end
 
@@ -69,7 +69,7 @@ begin
     gem 'tapp'
     gem 'awesome_print'
   end
-  git add: '.', commit: '-m "add tapp to Gemfile"'
+  git add: '.', commit: '-m "Add tapp to Gemfile"'
 end
 
 
@@ -82,7 +82,7 @@ begin
     gem 'pry-remote'
     gem 'pry-stack_explorer'
   end
-  git add: '.', commit: '-m "add pry to Gemfile"'
+  git add: '.', commit: '-m "Add pry to Gemfile"'
 end
 
 
@@ -97,7 +97,7 @@ begin
   end
   gsub_file 'Gemfile', /gem (["'])growl\1.*/,
     %q!\& if system('which growlnotify >/dev/null')!
-  git add: '.', commit: '-m "add testing frameworks to Gemfile"'
+  git add: '.', commit: '-m "Add testing frameworks to Gemfile"'
 end
 
 
@@ -105,19 +105,19 @@ begin
   create_link 'vendor/bundle', Bundler.bundle_path.parent.parent
 
   run 'bundle install --path vendor/bundle'
-  git add: '.', commit: '-m "exec bundle install"'
+  git add: '.', commit: '-m "Exec bundle install"'
 end
 
 
 begin
   run 'script/rails generate rspec:install'
-  git add: '.', commit: '-m "exec rails generate rspec:install"'
+  git add: '.', commit: '-m "Exec rails generate rspec:install"'
 end
 
 
 begin
   gsub_file 'spec/spec_helper.rb', /^ *(?=config\.fixture_path =)/, '\&#'
-  git add: '.', commit: '-m "comment out config for fixture"'
+  git add: '.', commit: '-m "Comment out config for fixture"'
 end
 
 
@@ -125,7 +125,7 @@ begin
   original_spec_helper = File.read('spec/spec_helper.rb')
 
   run 'bundle exec spork --bootstrap'
-  git add: '.', commit: '-m "exec spork --bootstrap"'
+  git add: '.', commit: '-m "Exec spork --bootstrap"'
 
   gsub_file 'spec/spec_helper.rb', /\A.*\z/m do |match|
     appended = match[0 ... - original_spec_helper.length]
@@ -133,19 +133,19 @@ begin
       $& + indent(original_spec_helper)
     end.sub(/\n*\z/, "\n")
   end
-  git add: '.', commit: '-m "modify spec_helper for Spork"'
+  git add: '.', commit: '-m "Modify spec_helper for Spork"'
 end
 
 
 begin
   run 'bundle exec guard init spork'
-  git add: '.', commit: '-m "exec guard init spork"'
+  git add: '.', commit: '-m "Exec guard init spork"'
 end
 
 
 begin
   run 'bundle exec guard init rspec'
-  git add: '.', commit: '-m "exec guard init rspec"'
+  git add: '.', commit: '-m "Exec guard init rspec"'
 end
 
 
@@ -157,11 +157,11 @@ begin
   gsub_file 'Guardfile', /^guard (["'])rspec\1.*(?= do$)/ do |match|
     match + ", cli: '--drb --format documentation'"
   end
-  git add: '.', commit: '-m "add rspec options"'
+  git add: '.', commit: '-m "Add rspec options"'
 end
 
 
 begin
   remove_file 'public/index.html'
-  git add: '-u .', commit: '-m "delete index.html"'
+  git add: '-u .', commit: '-m "Delete index.html"'
 end
