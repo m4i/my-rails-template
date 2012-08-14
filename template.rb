@@ -26,7 +26,7 @@ end
 
 
 
-use_haml = yes? 'do you want to use haml?'
+use_haml = yes? 'do you want to use haml? [yN]:'
 
 
 Bundler.with_clean_env do
@@ -91,6 +91,7 @@ Bundler.with_clean_env do
   begin
     gem_group :development, :test do
       gem 'plymouth', require: false
+      gem 'pry'
       gem 'pry-exception_explorer'
       gem 'pry-nav'
       gem 'pry-rails'
