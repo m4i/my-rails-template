@@ -71,6 +71,14 @@ Bundler.with_clean_env do
   end
 
 
+  #begin
+  #  content = File.read('Gemfile').
+  #    sub('https://rubygems.org', 'http://production.s3.rubygems.org/')
+  #  File.open('Gemfile', 'w') {|f| f.write content }
+  #  git add: '.', commit: '-m "Change gem source"'
+  #end
+
+
   begin
     if use_haml
       gem 'haml-rails'
