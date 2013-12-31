@@ -1,4 +1,4 @@
-source :rubygems
-#source 'http://production.s3.rubygems.org/'
+source 'https://rubygems.org'
 
 gem 'rails'
+gem 'pry'

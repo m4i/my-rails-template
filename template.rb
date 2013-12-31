@@ -9,24 +9,62 @@ def deindent(string, width = nil)
   string.gsub(/^ {#{width}}/, '')
 end
 
-def append_newline(path)
-  gsub_file path, /\z/, "\n"
+def append_trailing_newline(path)
+  gsub_file path, /(?<=[^\n])\z/, "\n"
 end
 
 def rstrip_newline(path)
   gsub_file path, /\n+\z/, ''
 end
 
-def gem(*args)
-  super.tap do
-    append_newline 'Gemfile' unless @in_group
+def rstrip_duplicated_newline(path)
+  gsub_file path, /\n+\z/, "\n"
+end
+
+def gem_group(*names, &block)
+  if names.empty?
+    yield
+    append_trailing_newline 'Gemfile'
+  else
+    super
   end
 end
 
+def append_to_gitignore(line)
+  unless @appended
+    @appended = true
+    spacer    = "\n"
+  end
+  append_to_file '.gitignore', "#{spacer}#{line}\n"
+end
+
+def bundle_path
+  unless @bundle_path == false
+    bundle_config_file = File.expand_path('../.bundle/config', __FILE__)
+    @bundle_path ||=
+      if File.exist?(bundle_config_file)
+        require 'yaml'
+        YAML.load_file(bundle_config_file)['BUNDLE_PATH']
+      end || false
+  end || nil
+end
+
+def use_slim?
+  if @use_slim.nil?
+    @use_slim = yes? 'do you want to use slim? [yN]:'
+  end
+  @use_slim
+end
+
+def use_mongoid?
+  ENV['USE_MONGOID'] == 'true'
+end
+
+def disable_jbuilder?
+  ENV['DISABLE_JBUILDER'] == 'true'
+end
 
 
-
-use_haml = yes? 'do you want to use haml? [yN]:'
 
 
 Bundler.with_clean_env do
@@ -34,153 +72,135 @@ Bundler.with_clean_env do
 
   begin
     git :init
-    git add: '.', commit: '-m "Exec rails new"'
+    git commit: '--allow-empty -m "Initialize repository"'
   end
 
 
   begin
-    append_file '.gitignore', deindent(<<-__EOT__)
-
-      /config/database.yml
-      /db/schema.rb
-      /db/structure.sql
-      /public/assets/
-      /vendor/bundle
-    __EOT__
-    git add: '.', commit: '-m "Add ignore files"'
+    git add: '.', commit: "-m 'Exec rails new #{File.basename(ARGV.first)} #{ARGV.drop(1).join(' ')}'"
   end
 
 
   begin
-    remove_file 'public/index.html'
-    git add: '-u .', commit: '-m "Delete index.html"'
+    append_to_gitignore '/public/assets/'
+    git add: '.', commit: '-m "Add public/assets to .gitignore"'
   end
 
 
   begin
-    remove_file 'app/assets/images/rails.png'
-    empty_directory_with_gitkeep 'app/assets/images'
-    git add: '-A .', commit: '-m "Delete rails.png"'
-  end
-
-
-  begin
-    FileUtils::Verbose.cp 'config/database.yml', 'config/database.yml.example'
-    git rm: '--cached config/database.yml'
-    git add: '.', commit: '-m "Rename database.yml to database.yml.example"'
-  end
-
-
-  #begin
-  #  content = File.read('Gemfile').
-  #    sub('https://rubygems.org', 'http://production.s3.rubygems.org/')
-  #  File.open('Gemfile', 'w') {|f| f.write content }
-  #  git add: '.', commit: '-m "Change gem source"'
-  #end
-
-
-  begin
-    if use_haml
-      gem 'haml-rails'
-      git add: '.', commit: '-m "Add haml-rails to Gemfile"'
+    if disable_jbuilder?
+      comment_lines 'Gemfile', /gem 'jbuilder'/
+      git add: '.', commit: '-m "Comment out jbuilder"'
     end
   end
 
 
   begin
+    if use_slim?
+      gem_group do
+        gem 'slim-rails'
+      end
+      git add: '.', commit: '-m "Add slim-rails to Gemfile"'
+    end
+  end
+
+
+  begin
+    if use_mongoid?
+      gem_group do
+        gem 'mongoid', github: 'mongoid/mongoid'
+        gem 'bson_ext'
+      end
+      git add: '.', commit: '-m "Add mongoid to Gemfile"'
+    end
+  end
+
+
+  begin
+    gem_group :development do
+      gem 'better_errors'
+      gem 'binding_of_caller' # for better_errors
+      gem 'bullet'
+      gem 'guard-rspec', require: false
+      gem 'quiet_assets'
+      gem 'rubocop-git', require: false
+      gem 'thin'
+    end
+
     gem_group :development, :test do
-      gem 'tapp'
       gem 'awesome_print'
-    end
-    git add: '.', commit: '-m "Add tapp to Gemfile"'
-  end
-
-
-  begin
-    gem_group :development, :test do
-      gem 'plymouth', require: false
-      gem 'pry'
-      gem 'pry-exception_explorer'
-      gem 'pry-nav'
+      gem 'hirb-unicode'
+      gem 'pry-byebug'
+      gem 'pry-doc'
       gem 'pry-rails'
-      gem 'pry-remote'
-      gem 'pry-stack_explorer'
+      gem 'tapp'
     end
-    git add: '.', commit: '-m "Add pry to Gemfile"'
+
+    git add: '.', commit: '-m "Add gems for development to Gemfile"'
   end
 
 
   begin
-    gem_group :development, :test do
-      gem 'rspec-rails'
-      gem 'factory_girl_rails'
-      gem 'capybara-webkit'
-      gem 'guard-spork'
-      gem 'guard-rspec'
-      gem 'growl'
+    gem_group :test do
+      gem 'capybara'
+      gem 'factory_girl_rails', group: :development
+      gem 'parallel_tests', group: :development
+      gem 'rspec-rails', group: :development
+      gem 'simplecov', require: false
     end
-    gsub_file 'Gemfile', /gem (["'])growl\1.*/,
-      %q!\& if system('which growlnotify >/dev/null')!
     git add: '.', commit: '-m "Add testing frameworks to Gemfile"'
   end
 
 
   begin
-    create_link 'vendor/bundle', Bundler.bundle_path.parent.parent
-    run 'bundle install --path vendor/bundle'
+    command = 'bundle install'
+    command << " --path #{bundle_path}" if bundle_path
+    run command
     git add: '.', commit: '-m "Exec bundle install"'
   end
 
 
   begin
-    run 'script/rails generate rspec:install'
+    if use_mongoid?
+      run 'bundle exec rails generate mongoid:config'
+      git add: '.', commit: '-m "Exec rails generate mongoid:config"'
+
+      append_to_gitignore '/config/mongoid.yml'
+      git add: '.', commit: '-m "Add config/mongoid.yml to .gitignore"'
+
+      copy_file File.expand_path('config/mongoid.yml'), 'config/mongoid.yml.example'
+      git rm: '--cached config/mongoid.yml'
+      git add: '.', commit: '-m "Rename mongoid.yml to mongoid.yml.example"'
+    end
+  end
+
+
+  begin
+    run 'bundle exec rails generate rspec:install'
     git add: '.', commit: '-m "Exec rails generate rspec:install"'
   end
 
 
-  begin
-    gsub_file 'spec/spec_helper.rb', /^ *(?=config\.fixture_path =)/, '\&#'
-    git add: '.', commit: '-m "Comment out config for fixture"'
-  end
+  #begin
+  #  append_to_file '.rspec', deindent(<<-__EOT__)
+  #    --format documentation
+  #  __EOT__
+  #  git add: '.', commit: '-m "Add rspec options"'
+  #end
 
 
   begin
-    original_spec_helper = File.read('spec/spec_helper.rb')
-
-    run 'bundle exec spork --bootstrap'
-    git add: '.', commit: '-m "Exec spork --bootstrap"'
-
-    gsub_file 'spec/spec_helper.rb', /\A.*\z/m do |match|
-      appended = match[0 ... - original_spec_helper.length]
-      appended.sub(/^Spork\.prefork do$.*?(?=^end$)/m) do
-        $& + indent(original_spec_helper)
-      end.sub(/\n*\z/, "\n")
+    if use_mongoid?
+      comment_lines 'spec/spec_helper.rb', /config\.fixture_path =/
+      comment_lines 'spec/spec_helper.rb', /config\.use_transactional_fixtures =/
+      git add: '.', commit: '-m "Comment out fixture configs for mongoid"'
     end
-    git add: '.', commit: '-m "Modify spec_helper for Spork"'
-  end
-
-
-  begin
-    run 'bundle exec guard init spork'
-    git add: '.', commit: '-m "Exec guard init spork"'
   end
 
 
   begin
     run 'bundle exec guard init rspec'
     git add: '.', commit: '-m "Exec guard init rspec"'
-  end
-
-
-  begin
-    append_file '.rspec', deindent(<<-__EOT__)
-      --drb
-      --format documentation
-    __EOT__
-    gsub_file 'Guardfile', /^guard (["'])rspec\1.*(?= do$)/ do |match|
-      match + ", cli: '--drb --format documentation'"
-    end
-    git add: '.', commit: '-m "Add rspec options"'
   end
 
 

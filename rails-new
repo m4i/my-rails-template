@@ -1,27 +1,73 @@
 #!/bin/bash
 
+USE_MONGOID=false
+
+while (($# > 0)); do
+  case "$1" in
+    --)
+      shift
+      break
+      ;;
+    --mongoid)
+      export USE_MONGOID=true
+      ;;
+    --disable-jbuilder)
+      export DISABLE_JBUILDER=true
+      ;;
+    -*)
+      echo "invalid options: $1" >&2
+      exit 1
+      ;;
+    *)
+      break
+      ;;
+  esac
+  shift
+done
+
 if [ $# -eq 0 ]; then
-  echo './rails-new APP_PATH [options]' >&2
-  exit 1
+  echo './rails-new [--mongoid] APP_PATH [rails new options]' >&2
+  exit 2
 fi
 
 app_path="$1"
 shift
 
-if [ -e "$app_path" ]; then
-  echo "$app_path already exists" >&2
-  exit 2
+
+if [[ -e "$app_path" ]]; then
+  if [[ -n "$(ls -A "$app_path")" ]]; then
+    echo "$app_path already exists" >&2
+    exit 3
+  fi
+
+  absolute_path="$(cd "$app_path" >/dev/null 2>&1 && pwd)"
+else
+  mkdir "$app_path"
+  absolute_path="$(cd "$app_path" >/dev/null 2>&1 && pwd)"
+  rmdir "$app_path"
 fi
 
-mkdir "$app_path"
-absolute_path="$(cd "$app_path" >/dev/null 2>&1 && pwd)"
-rmdir "$app_path"
 if [ -z "$absolute_path" ]; then
   echo "cannot get absoulte app_path" >&2
-  exit 3
+  exit 4
+fi
+
+
+rails_new() {
+  echo $ bundle exec rails new "$@"
+  exec bundle exec rails new "$@"
+}
+
+
+args=()
+args[${#args[@]}]="$absolute_path"
+args[${#args[@]}]=--template
+args[${#args[@]}]=template.rb
+args[${#args[@]}]=--skip-bundle
+args[${#args[@]}]=--skip-test-unit
+if $USE_MONGOID; then
+  args[${#args[@]}]=--skip-active-record
 fi
 
 cd "$(dirname $0)"
-echo $ \
-bundle exec rails new "$absolute_path" -m template.rb --skip-bundle -T "$@"
-bundle exec rails new "$absolute_path" -m template.rb --skip-bundle -T "$@"
+rails_new "${args[@]}" "$@"
